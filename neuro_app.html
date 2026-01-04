@@ -1,1 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Thiago Carvalho de Souza – Psicólogo & Neuropsicólogo</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; color: #333; }
+  header { background: #34495e; color: #fff; padding: 20px 10px; text-align: center; position: relative; }
+  header h1 { margin: 10px 0 5px; font-size: 24px; }
+  header img { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #fff; margin-top: 10px; object-fit: cover; }
+  header .contact { font-size: 14px; line-height: 1.5; }
+  header button { position: absolute; top: 15px; right: 15px; padding: 6px 12px; font-size: 12px; border: none; border-radius: 4px; background: #e67e22; color: #fff; cursor: pointer; }
+  header button:hover { background: #d35400; }
 
+  section { max-width: 900px; margin: 20px auto; border: 1px solid #ddd; border-radius: 6px; background: #fff; overflow: hidden; }
+  section + section { margin-top: 10px; }
+  section .header { background: #ecf0f1; padding: 10px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  section .header h2 { margin: 0; font-size: 18px; }
+  section .actions { display: none; }
+  section .actions button { margin-left: 5px; padding: 3px 6px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; }
+  section .actions button.edit { background: #2980b9; color: #fff; }
+  section .actions button.delete { background: #c0392b; color: #fff; }
+  section .actions button.save { background: #27ae60; color: #fff; }
+  section .content { padding: 10px 15px; display: none; }
+
+  /* Admin overlay */
+  #adminOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+  #adminOverlay .dialog { background: #fff; padding: 20px; border-radius: 6px; width: 300px; text-align: center; }
+  #adminOverlay input { width: 100%; padding: 6px; margin-top: 10px; border: 1px solid #ccc; border-radius: 4px; }
+  #adminOverlay button { margin-top: 15px; padding: 8px 12px; background: #27ae60; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  #adminOverlay button:hover { background: #1e8449; }
+
+  /* Add section button */
+  #addSectionBtn { display: none; margin: 20px auto; text-align: center; }
+  #addSectionBtn button { padding: 8px 15px; font-size: 14px; background: #16a085; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+  #addSectionBtn button:hover { background: #13866b; }
+
+</style>
+</head>
+<body>
+<header>
+  <button id="adminBtn">Admin</button>
+  <img src="perfil.jpg" alt="Foto profissional">
+  <h1>Thiago Carvalho de Souza</h1>
+  <div class="contact">
+    <strong>CRP:</strong> 05/63586<br>
+    <strong>E‑mail:</strong> psi.tg.carvalho@gmail.com<br>
+    <strong>Telefone:</strong> (22) 99923‑9467
+  </div>
+</header>
+
+<div id="sectionsContainer"></div>
+
+<div id="addSectionBtn">
+  <button id="addBtn">Adicionar Seção</button>
+</div>
+
+<!-- Admin login overlay -->
+<div id="adminOverlay">
+  <div class="dialog">
+    <h2>Login do Administrador</h2>
+    <p>Digite a senha para entrar no modo de edição:</p>
+    <input type="password" id="adminPassword" placeholder="Senha">
+    <button id="adminLogin">Entrar</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Default sections data
+  const defaultSections = [
+    { title: "Resumo Profissional", content: `<p>Sou psicólogo clínico com abordagem existencial‑humanista e formação em neuropsicologia. Atuo com adolescentes, adultos e idosos em atendimentos terapêuticos e avaliações neuropsicológicas. Minha prática é marcada pela escuta atenta e pela compreensão da singularidade de cada pessoa, integrando dados objetivos de testes à subjetividade do paciente. Minhas avaliações são reconhecidas pela profundidade técnica, recebendo elogios de profissionais como a Dra. Helle‑Nice Haddad.</p>` },
+    { title: "Objetivo Profissional", content: `<p>Contribuir para a promoção da saúde mental e o desenvolvimento cognitivo por meio de atendimentos clínicos e avaliações neuropsicológicas completas. Busco oferecer um espaço seguro de expressão, acolhimento e reflexão, indicando caminhos terapêuticos individualizados de forma precisa e ética.</p>` },
+    { title: "Especialidades", content: `<ul><li>Crises existenciais e de identidade</li><li>Fobia social e ansiedade</li><li>Autoestima e relacionamento abusivo</li><li>Projeto de vida e sentido existencial</li><li>Angústia e depressão</li><li>Aplicação de instrumentos neuropsicológicos (WISC‑IV, RAVLT, Torre de Londres, Vineland‑3, TRIA, SRS‑2, SNAP‑IV, BPA, Figuras Complexas de Rey, M‑CHAT‑R, G‑38, BSI, TOL‑BR, MVPT, ADT, EFN‑R, G‑30, EPQ‑J, entre outros)</li></ul>` },
+    { title: "Experiência Profissional", content: `<ul><li><strong>Espaço do Aprender e Brincar – Campos dos Goytacazes (2023‑Atual)</strong>: Psicólogo clínico e neuropsicólogo, com atendimentos a crianças, adolescentes e adultos. Responsável técnico desde 2025.</li><li><strong>Clínica da Audição (2023‑Atual)</strong>: Neuropsicólogo responsável por avaliações de adultos, crianças e idosos, com foco em integração entre testes, clínica e história do paciente.</li><li><strong>Centro Universitário Fluminense – UNIFLU (2018‑Atual)</strong>: Pesquisador voluntário do grupo regional GPIDMR UENF/UNIFLU.</li><li><strong>Paróquia São Gonçalo / Paróquia de Goitacazes (2021‑2023)</strong>: Estagiário em atendimento psicológico a adultos em vulnerabilidade social.</li><li>Experiência voluntária em atendimento clínico existencial‑humanista com adultos (3,5 anos).</li></ul>` },
+    { title: "Formação Acadêmica", content: `<ul><li><strong>Pós‑graduação em Neuropsicologia</strong>, Faculdades Metropolitanas de São Paulo – FAMESP (720 h, 2020‑2022). Título: <em>Neuropsicologia das emoções</em>.</li><li><strong>Graduação em Psicologia</strong>, Universidade Estácio de Sá – UNESA (2012‑2020). Trabalho de conclusão: <em>Filosofia e Psicologia: Nietzsche como Psicólogo</em>.</li><li><strong>Especialização em Experiência de Aprendizagem Mediada de Feuerstein</strong>, Centro de Desenvolvimento Cognitivo do Paraná (2023).</li><li><strong>Pós‑graduação em ABA (Análise do Comportamento Aplicada)</strong> – em andamento.</li><li><strong>Pós‑graduação em Terapia Familiar e de Casal</strong> – em andamento.</li><li><strong>Ensino profissional em Mecânica industrial</strong>, Instituto Federal Fluminense (2009‑2011).</li></ul>` },
+    { title: "Cursos Complementares", content: `<ul><li>Terapia de casais e família (720 h, 2025)</li><li>Desenvolvimento e gerenciamento de projetos (720 h, 2025)</li><li>Análise do comportamento aplicada – ABA (800 h, 2025)</li><li>Seminário sobre TDAH, TOD e TEA; fábulas como recurso psicoterapêutico; inventário Portage; mostras e congressos científicos; seminários sobre maternidade, cuidados paliativos e luto.</li></ul>` },
+    { title: "Publicações e Produções", content: `<ul><li><em>Introdução Essencial à Filosofia de Nietzsche</em>, UICLAP (2025) – Livro.</li><li><em>Mundo e existência: ensaio sobre a inautenticidade contemporânea</em>, Kindle Direct Publishing (2024).</li><li><em>Autismo, guia essencial</em> (2024) – Manual introdutório para pais e profissionais.</li><li><em>Filosofia e Psicologia</em> (2020) – Trabalho de conclusão de curso.</li><li><em>Alberto Fourier</em>, Pequenas Tiragens (2017) – Romance.</li></ul>` },
+    { title: "Informações Complementares", content: `<ul><li>Aplicação de baterias neuropsicológicas completas com foco em precisão diagnóstica e clareza na devolutiva.</li><li>Experiência em anamnese clínica profunda, considerando contexto emocional e familiar.</li><li>Capacidade de elaboração de relatórios completos, claros e bem fundamentados.</li><li>Disponibilidade para atuação em clínicas, hospitais, escolas e instituições interdisciplinares, presencialmente ou via teleatendimento.</li></ul>` }
+  ];
+
+  const sectionsContainer = document.getElementById('sectionsContainer');
+  const adminOverlay = document.getElementById('adminOverlay');
+  const adminBtn = document.getElementById('adminBtn');
+  const adminLoginBtn = document.getElementById('adminLogin');
+  const adminPasswordInput = document.getElementById('adminPassword');
+  const addSectionBtn = document.getElementById('addSectionBtn');
+  const addBtn = document.getElementById('addBtn');
+
+  let sections = [];
+  let adminMode = false;
+
+  // Load saved sections from localStorage or default
+  function loadSections() {
+    const saved = localStorage.getItem('sections');
+    if (saved) {
+      try {
+        sections = JSON.parse(saved);
+      } catch(e) {
+        sections = defaultSections;
+      }
+    } else {
+      sections = defaultSections;
+    }
+  }
+
+  // Save sections to localStorage
+  function saveSections() {
+    localStorage.setItem('sections', JSON.stringify(sections));
+  }
+
+  // Render all sections
+  function renderSections() {
+    sectionsContainer.innerHTML = '';
+    sections.forEach((sec, index) => {
+      const sectionEl = document.createElement('section');
+
+      const headerEl = document.createElement('div');
+      headerEl.className = 'header';
+      const titleEl = document.createElement('h2');
+      titleEl.innerText = sec.title;
+      headerEl.appendChild(titleEl);
+
+      // Admin action buttons
+      const actionsEl = document.createElement('div');
+      actionsEl.className = 'actions';
+      const editBtn = document.createElement('button');
+      editBtn.className = 'edit';
+      editBtn.innerText = 'Editar';
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete';
+      deleteBtn.innerText = 'Excluir';
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'save';
+      saveBtn.innerText = 'Salvar';
+      saveBtn.style.display = 'none';
+      actionsEl.appendChild(editBtn);
+      actionsEl.appendChild(deleteBtn);
+      actionsEl.appendChild(saveBtn);
+      headerEl.appendChild(actionsEl);
+
+      const contentEl = document.createElement('div');
+      contentEl.className = 'content';
+      contentEl.innerHTML = sec.content;
+
+      // Toggle display on header click (when not editing)
+      headerEl.addEventListener('click', function(event) {
+        // Avoid toggling when clicking on action buttons
+        if (event.target.tagName === 'BUTTON' || contentEl.getAttribute('contenteditable') === 'true') {
+          return;
+        }
+        contentEl.style.display = contentEl.style.display === 'block' ? 'none' : 'block';
+      });
+
+      // Edit button
+      editBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!adminMode) return;
+        // Enable editing
+        contentEl.setAttribute('contenteditable', 'true');
+        contentEl.style.display = 'block';
+        editBtn.style.display = 'none';
+        saveBtn.style.display = 'inline-block';
+      });
+
+      // Save button
+      saveBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!adminMode) return;
+        // Save edited content
+        sections[index].content = contentEl.innerHTML;
+        saveSections();
+        contentEl.removeAttribute('contenteditable');
+        saveBtn.style.display = 'none';
+        editBtn.style.display = 'inline-block';
+      });
+
+      // Delete button
+      deleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (!adminMode) return;
+        if (confirm('Tem certeza de que deseja excluir esta seção?')) {
+          sections.splice(index, 1);
+          saveSections();
+          renderSections();
+        }
+      });
+
+      // Append to container
+      sectionEl.appendChild(headerEl);
+      sectionEl.appendChild(contentEl);
+      sectionsContainer.appendChild(sectionEl);
+    });
+  }
+
+  // Admin login handling
+  adminBtn.addEventListener('click', () => {
+    adminOverlay.style.display = 'flex';
+    adminPasswordInput.value = '';
+  });
+
+  adminLoginBtn.addEventListener('click', () => {
+    const pwd = adminPasswordInput.value;
+    // For demonstration, the password is 'admin'. In a real site, replace with secure auth.
+    if (pwd === 'admin') {
+      adminMode = true;
+      adminOverlay.style.display = 'none';
+      enableAdminMode();
+    } else {
+      alert('Senha incorreta!');
+    }
+  });
+
+  function enableAdminMode() {
+    // Show all action buttons
+    document.querySelectorAll('.actions').forEach(action => {
+      action.style.display = 'block';
+    });
+    // Show add section button
+    addSectionBtn.style.display = 'block';
+  }
+
+  // Add section
+  addBtn.addEventListener('click', () => {
+    const title = prompt('Título da nova seção:');
+    if (!title) return;
+    const content = prompt('Conteúdo da nova seção (HTML simples permitido):');
+    sections.push({ title: title, content: `<p>${content || ''}</p>` });
+    saveSections();
+    renderSections();
+    if (adminMode) enableAdminMode();
+  });
+
+  // Initialize
+  loadSections();
+  renderSections();
+})();
+</script>
+</body>
+</html>
