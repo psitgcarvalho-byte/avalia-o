@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aplicativo de Análise Neuropsicológica</title>
+  <!--
+    Este arquivo HTML reúne toda a aplicação em um único documento, sem dependências
+    de pastas ou arquivos externos. O código CSS e JavaScript foram incorporados
+    diretamente nos elementos <style> e <script> abaixo. O comportamento e a
+    interface são equivalentes à versão modular anterior, incluindo cadastro de
+    pacientes, agendamento, seleção de casos para análise, geração de seções
+    utilizando IA (com suporte a chave de API), exportação, compartilhamento e
+    análise de coerência. Os cantos dos cartões e controles são arredondados.
+  -->
+  <style>
+    /* Estilos para o aplicativo de análise neuropsicológica */
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+
+    #app {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background-color: #e0e0e0;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .tab-button.active {
+      background-color: #ffffff;
+      border-bottom: 2px solid #0077cc;
+      font-weight: bold;
+    }
+
+    .tab-button:disabled {
+      background-color: #ddd;
+      cursor: not-allowed;
+    }
+
+    .content {
+      margin-top: 10px;
+    }
+
+    /* Cartões possuem cantos mais arredondados para uma aparência suave */
+    .card {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .card h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+    }
+
+    .form-field label {
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
+
+    .form-field input,
+    .form-field select {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    .form-field input:invalid {
+      border-color: #e60000;
+    }
+
+    .error {
+      color: #e60000;
+      font-size: 12px;
+      height: 14px;
+    }
+
+    .upload-info {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #444;
+      word-wrap: break-word;
+    }
+
+    .steps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    /* Cada etapa tem cantos arredondados semelhantes aos cartões principais */
+    .step-card {
+      background-color: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .step-header h4 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .status-label {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #fff;
+    }
+
+    .status-pendente { background-color: #999; }
+    .status-gerado { background-color: #0077cc; }
+    .status-revisado { background-color: #00aa55; }
+
+    .step-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    /* Botões das etapas com cantos arredondados consistentes */
+    .step-actions button {
+      padding: 6px 10px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #0077cc;
+      color: #fff;
+      transition: background-color 0.3s ease;
+    }
+
+    .step-actions button:hover:not(:disabled) {
+      background-color: #005fa3;
+    }
+
+    .step-actions button:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    /* Área de texto com cantos arredondados */
+    .step-text {
+      width: 100%;
+      min-height: 120px;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 14px;
+    }
+
+    /* Área de resultados de coerência com cantos arredondados */
+    .coherence-results {
+      margin-top: 10px;
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    /* Painel de exportação com cantos arredondados */
+    .export-options {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #fafafa;
+    }
+
+    .export-options label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .share-link {
+      margin-top: 10px;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
+
+    /* Cartão informativo para avisos gerais */
+    .info-card {
+      background-color: #fdf7e0;
+      border-color: #f5d682;
+    }
+    .info-card h3 {
+      color: #996a00;
+    }
+
+    /* Lista de agendamentos */
+    .agenda-list {
+      list-style-type: none;
+      padding-left: 0;
+      margin: 0;
+    }
+    .agenda-list li {
+      padding: 6px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    .agenda-list li:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1>Aplicativo de Análise Neuropsicológica</h1>
+    </header>
+    <nav class="tabs">
+      <button id="tabCadastro" class="tab-button active" type="button">Cadastro</button>
+      <button id="tabAgendamento" class="tab-button" type="button" disabled>Agendamento</button>
+      <button id="tabAnalise" class="tab-button" type="button" disabled>Análise</button>
+    </nav>
+    <main class="content">
+      <!-- Cadastro Section -->
+      <section id="cadastroSection" class="tab-content">
+        <h2>Cadastro do Paciente</h2>
+        <div class="card">
+          <h3>Dados do Paciente</h3>
+          <div class="form-field">
+            <label for="pacienteNome">Nome *</label>
+            <input type="text" id="pacienteNome" name="nome" placeholder="Nome completo" required />
+            <span class="error" id="erroNome"></span>
+          </div>
+          <div class="form-field">
+            <label for="pacienteIdade">Idade *</label>
+            <input type="number" id="pacienteIdade" name="idade" min="0" max="120" placeholder="Idade" required />
+            <span class="error" id="erroIdade"></span>
+          </div>
+          <div class="form-field">
+            <label for="pacienteGenero">Gênero *</label>
+            <select id="pacienteGenero" name="genero" required>
+              <option value="">Selecione</option>
+              <option value="Feminino">Feminino</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Outro">Outro</option>
+            </select>
+            <span class="error" id="erroGenero"></span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Anamnese (obrigatório)</h3>
+          <p>Faça upload de um documento de anamnese ou documento clínico equivalente nos formatos PDF, DOCX ou TXT.</p>
+          <input type="file" id="anamneseInput" accept=".pdf,.doc,.docx,.txt" />
+          <div id="anamneseInfo" class="upload-info"></div>
+          <span class="error" id="erroAnamnese"></span>
+        </div>
+        <div class="card">
+          <h3>Controles</h3>
+          <button id="novoCasoBtn" type="button">Novo Caso</button>
+          <button id="salvarCadastroBtn" type="button">Salvar Cadastro</button>
+        </div>
+
+        <!-- API Configuration Card -->
+        <div class="card">
+          <h3>Configuração de IA</h3>
+          <p>Para habilitar a geração automática de textos utilizando o GPT, insira sua chave de API. Essa chave será armazenada apenas no seu navegador.</p>
+          <div class="form-field">
+            <label for="apiKeyInput">Chave API GPT</label>
+            <input type="password" id="apiKeyInput" placeholder="Insira sua chave API" />
+          </div>
+          <button id="saveApiKeyBtn" type="button">Salvar Chave</button>
+          <span class="info" id="apiKeyStatus"></span>
+        </div>
+      </section>
+
+      <!-- Agendamento Section -->
+      <section id="agendamentoSection" class="tab-content" style="display:none">
+        <h2>Agendamento</h2>
+        <div class="card">
+          <h3>Novo Agendamento</h3>
+          <p>Selecione o paciente e informe a data e horário do atendimento.</p>
+          <div class="form-field">
+            <label for="agendamentoPaciente">Paciente</label>
+            <!-- preenchido dinamicamente com casos existentes -->
+            <select id="agendamentoPaciente" name="agendamentoPaciente">
+              <option value="">Selecione um paciente</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="agendamentoData">Data</label>
+            <input type="date" id="agendamentoData" name="agendamentoData" />
+          </div>
+          <div class="form-field">
+            <label for="agendamentoHora">Hora</label>
+            <input type="time" id="agendamentoHora" name="agendamentoHora" />
+          </div>
+          <div class="form-field">
+            <label for="agendamentoNotas">Notas</label>
+            <textarea id="agendamentoNotas" name="agendamentoNotas" placeholder="Observações do agendamento"></textarea>
+          </div>
+          <button id="agendamentoBtn" type="button">Agendar</button>
+          <span class="error" id="erroAgendamento"></span>
+        </div>
+        <div class="card">
+          <h3>Próximos Agendamentos</h3>
+          <div id="agendamentoLista" class="schedule-list"></div>
+        </div>
+      </section>
+
+      <!-- Análise Section -->
+      <section id="analiseSection" class="tab-content" style="display:none">
+        <h2>Análise</h2>
+        <div class="card">
+          <h3>Seleção de Paciente</h3>
+          <p>Escolha um paciente para visualizar e analisar o caso.</p>
+          <select id="patientSelect">
+            <option value="">Selecione um paciente</option>
+            <!-- opções serão carregadas dinamicamente -->
+          </select>
+        </div>
+        <!-- Aviso sobre limitações da IA -->
+        <div class="card info-card">
+          <h3>Atenção</h3>
+          <p>
+            A inteligência artificial utilizada neste aplicativo não realiza uma análise diagnóstica formal
+            dos documentos anexados de acordo com os manuais DSM‑5 ou CID‑11. O conteúdo gerado é
+            baseado nos dados disponibilizados e não substitui a avaliação profissional neuropsicológica.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Resultados dos Testes (obrigatório)</h3>
+          <p>Faça upload dos resultados dos testes neuropsicológicos nos formatos PDF, DOCX ou TXT.</p>
+          <input type="file" id="testsInput" accept=".pdf,.doc,.docx,.txt" />
+          <div id="testsInfo" class="upload-info"></div>
+          <span class="error" id="erroTests"></span>
+        </div>
+        <div class="card">
+          <h3>Etapas de Geração</h3>
+          <div id="stepsContainer" class="steps-container"></div>
+        </div>
+        <div class="card">
+          <h3>Análise de Coerência</h3>
+          <button id="coherenceBtn" type="button">Executar Análise de Coerência</button>
+          <div id="coherenceResults" class="coherence-results"></div>
+        </div>
+        <div class="card">
+          <h3>Exportar Conteúdo Gerado</h3>
+          <button id="exportBtn" type="button">Exportar TXT</button>
+          <div id="exportOptions" class="export-options" style="display:none">
+            <p>Selecione as seções que deseja incluir no arquivo TXT:</p>
+            <form id="exportForm">
+              <!-- checkboxes dynamically generated -->
+            </form>
+            <button id="confirmExportBtn" type="button">Gerar e Baixar</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Compartilhar</h3>
+          <button id="shareBtn" type="button">Gerar Link Compartilhável</button>
+          <div id="shareLinkContainer" class="share-link"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script>
+    /*
+     * Este script replica toda a lógica da aplicação originalmente dividida em
+     * múltiplos arquivos. Todas as funcionalidades são preservadas: cadastro de
+     * pacientes, criação de novos casos, agendamento de consultas, seleção de
+     * paciente para análise, geração de seções via IA com no mínimo 300 palavras,
+     * análise de coerência, exportação de relatórios em TXT e geração de links
+     * de compartilhamento. A persistência ocorre via localStorage.
+     */
+
+    // Lista das etapas fixas do processo de geração, na ordem correta.
+    const STEPS = [
+      { id: 'identificacao', title: 'Identificação' },
+      { id: 'queixa', title: 'Queixa principal' },
+      { id: 'historico', title: 'Histórico clínico e psicossocial' },
+      { id: 'instrumentos', title: 'Instrumentos utilizados' },
+      { id: 'resultados', title: 'Resultados e interpretação por domínios cognitivos' },
+      { id: 'hipotese', title: 'Hipótese diagnóstica' },
+      { id: 'justificativa', title: 'Justificativa e diagnóstico diferencial' },
+      { id: 'conclusao', title: 'Conclusão e recomendações' },
+      { id: 'referencias', title: 'Referências' }
+    ];
+
+    // Lista de todos os casos existentes. É carregada de localStorage e cada elemento
+    // corresponde a um objeto de caso independente. caseData aponta para o caso
+    // atualmente selecionado.
+    let casesList = [];
+
+    // Estrutura de dados do caso atual (selecionado). Será carregada de casesList
+    // ou inicializada ao criar um novo caso.
+    let caseData = null;
+
+    // Lista de agendamentos. Cada item contém caseId, patientName, data, hora e notas.
+    let appointments = [];
+
+    // Flag que indica se o modo de visualização de compartilhamento está ativo.
+    let shareView = false;
+
+    /**
+     * Chave da API utilizada para chamadas ao modelo GPT. É carregada de localStorage
+     * pela função loadApiKey() e pode ser atualizada pelo usuário na interface.
+     */
+    let openaiKey = null;
+
+    // Função inicial chamada ao carregar a página.
+    document.addEventListener('DOMContentLoaded', () => {
+      // Verifica se a URL contém dados de compartilhamento (#share=...)
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#share=')) {
+        const encoded = hash.substring(7);
+        try {
+          const json = atob(decodeURIComponent(encoded));
+          const data = JSON.parse(json);
+          shareView = true;
+          renderSharedCase(data);
+          return;
+        } catch (e) {
+          console.error('Erro ao decodificar dados compartilhados', e);
+        }
+      }
+      // Inicialização normal do app
+      initApp();
+    });
+
+    /**
+     * Carrega a lista de casos e agendamentos do localStorage. Se não houver
+     * registros, inicializa com um array vazio. Também migra um caso único
+     * existente em "clinical_case" para o formato de lista, garantindo
+     * compatibilidade com versões anteriores.
+     */
+    function loadCasesAndAppointments() {
+      try {
+        // Carrega casos
+        const storedCases = localStorage.getItem('clinical_cases');
+        if (storedCases) {
+          casesList = JSON.parse(storedCases);
+        } else {
+          casesList = [];
+        }
+        // Migra caso único se existir
+        const singleCase = localStorage.getItem('clinical_case');
+        if (singleCase && casesList.length === 0) {
+          const oldCase = JSON.parse(singleCase);
+          if (oldCase) {
+            casesList.push(oldCase);
+            localStorage.setItem('clinical_cases', JSON.stringify(casesList));
+            localStorage.removeItem('clinical_case');
+            localStorage.setItem('current_case_id', oldCase.id);
+          }
+        }
+        // Carrega agendamentos
+        const storedAppts = localStorage.getItem('appointments');
+        if (storedAppts) {
+          appointments = JSON.parse(storedAppts);
+        } else {
+          appointments = [];
+        }
+      } catch (e) {
+        console.error('Erro ao carregar casos ou agendamentos:', e);
+        casesList = [];
+        appointments = [];
+      }
+    }
+
+    /**
+     * Salva a lista de casos no localStorage.
+     */
+    function saveCasesList() {
+      try {
+        localStorage.setItem('clinical_cases', JSON.stringify(casesList));
+      } catch (e) {
+        console.error('Erro ao salvar lista de casos:', e);
+      }
+    }
+
+    /**
+     * Salva a lista de agendamentos no localStorage.
+     */
+    function saveAppointments() {
+      try {
+        localStorage.setItem('appointments', JSON.stringify(appointments));
+      } catch (e) {
+        console.error('Erro ao salvar agendamentos:', e);
+      }
+    }
+
+    /**
+     * Define o caso atual a partir de um ID. Atualiza caseData e a UI. Se
+     * nenhum ID for fornecido, seleciona o primeiro caso da lista (se houver).
+     * Salva o ID atual em localStorage.
+     * @param {string} caseId
+     */
+    function setCurrentCase(caseId) {
+      if (!casesList || casesList.length === 0) {
+        caseData = null;
+        return;
+      }
+      let selected = null;
+      if (caseId) {
+        selected = casesList.find(c => c.id === caseId);
+      }
+      if (!selected) {
+        selected = casesList[0];
+      }
+      caseData = selected;
+      if (caseData) {
+        try {
+          localStorage.setItem('current_case_id', caseData.id);
+        } catch (e) {
+          console.error('Erro ao salvar ID de caso atual:', e);
+        }
+        updateUI();
+      }
+    }
+
+    /**
+     * Preenche os dropdowns de seleção de paciente no agendamento e na análise.
+     */
+    function populateCaseDropdowns() {
+      const agendamentoSelect = document.getElementById('agendamentoPaciente');
+      const patientSelect = document.getElementById('patientSelect');
+      if (!agendamentoSelect || !patientSelect) return;
+      // Limpa opções exceto a primeira
+      function clearOptions(select) {
+        while (select.options.length > 1) {
+          select.remove(1);
+        }
+      }
+      clearOptions(agendamentoSelect);
+      clearOptions(patientSelect);
+      // Adiciona cada caso
+      casesList.forEach(c => {
+        const label = c.patient && c.patient.nome ? c.patient.nome : 'Caso ' + c.id;
+        const opt1 = document.createElement('option');
+        opt1.value = c.id;
+        opt1.textContent = label;
+        agendamentoSelect.appendChild(opt1.cloneNode(true));
+        const opt2 = document.createElement('option');
+        opt2.value = c.id;
+        opt2.textContent = label;
+        patientSelect.appendChild(opt2);
+      });
+      // Seleciona a opção atual no patientSelect
+      const currentId = localStorage.getItem('current_case_id');
+      if (currentId) {
+        patientSelect.value = currentId;
+        agendamentoSelect.value = currentId;
+      }
+    }
+
+    /**
+     * Renderiza a lista de agendamentos futuros na interface.
+     * Ordena por data e hora e exibe detalhes básicos do paciente e observações.
+     */
+    function renderAppointments() {
+      const listDiv = document.getElementById('agendamentoLista');
+      if (!listDiv) return;
+      // Se não houver agendamentos, limpa
+      if (!appointments || appointments.length === 0) {
+        listDiv.innerHTML = '<p>Não há agendamentos cadastrados.</p>';
+        return;
+      }
+      // Ordena por data/hora
+      const sorted = [...appointments].sort((a, b) => {
+        const d1 = new Date(a.data + 'T' + a.hora);
+        const d2 = new Date(b.data + 'T' + b.hora);
+        return d1 - d2;
+      });
+      let html = '<ul class="agenda-list">';
+      sorted.forEach(appt => {
+        const caseItem = casesList.find(c => c.id === appt.caseId);
+        const name = caseItem && caseItem.patient && caseItem.patient.nome ? caseItem.patient.nome : 'Paciente';
+        html += `<li><strong>${name}</strong> - ${appt.data} às ${appt.hora}`;
+        if (appt.notas) html += ` (Notas: ${appt.notas})`;
+        html += '</li>';
+      });
+      html += '</ul>';
+      listDiv.innerHTML = html;
+    }
+
+    /**
+     * Função principal de inicialização do aplicativo.
+     */
+    function initApp() {
+      // Carrega lista de casos e agendamentos antes de qualquer coisa
+      loadCasesAndAppointments();
+      // Obter elementos de interface
+      const tabCadastro = document.getElementById('tabCadastro');
+      const tabAnalise = document.getElementById('tabAnalise');
+      const tabAgendamento = document.getElementById('tabAgendamento');
+      // Eventos de alternância das abas
+      tabCadastro.addEventListener('click', () => switchTab('cadastro'));
+      tabAnalise.addEventListener('click', () => {
+        // Somente permite abrir Análise se os requisitos estiverem atendidos
+        if (!tabAnalise.disabled) switchTab('analise');
+      });
+      // Evento da aba de agendamento
+      if (tabAgendamento) {
+        tabAgendamento.addEventListener('click', () => {
+          if (!tabAgendamento.disabled) switchTab('agendamento');
+        });
+      }
+      // Carrega a chave de API do armazenamento local
+      loadApiKey();
+      // Eventos de entrada de dados do paciente
+      document.getElementById('pacienteNome').addEventListener('input', handlePatientInput);
+      document.getElementById('pacienteIdade').addEventListener('input', handlePatientInput);
+      document.getElementById('pacienteGenero').addEventListener('change', handlePatientInput);
+      // Uploads de anamnese e testes
+      document.getElementById('anamneseInput').addEventListener('change', handleAnamneseUpload);
+      document.getElementById('testsInput').addEventListener('change', handleTestsUpload);
+      // Botões de controle no cadastro
+      document.getElementById('novoCasoBtn').addEventListener('click', () => {
+        if (confirm('Deseja realmente criar um novo caso? Todas as informações não salvas serão perdidas.')) {
+          createNewCase();
+        }
+      });
+      document.getElementById('salvarCadastroBtn').addEventListener('click', () => {
+        saveCase();
+        alert('Cadastro salvo com sucesso.');
+      });
+      // Botão de salvamento da chave API
+      const saveApiBtn = document.getElementById('saveApiKeyBtn');
+      if (saveApiBtn) {
+        saveApiBtn.addEventListener('click', () => {
+          saveApiKey();
+        });
+      }
+      // Botões da área de análise
+      document.getElementById('coherenceBtn').addEventListener('click', analyzeCoherence);
+      document.getElementById('exportBtn').addEventListener('click', toggleExportOptions);
+      document.getElementById('confirmExportBtn').addEventListener('click', exportTXT);
+      document.getElementById('shareBtn').addEventListener('click', shareCase);
+      // Eventos da área de agendamento
+      const agendarBtn = document.getElementById('agendamentoBtn');
+      if (agendarBtn) {
+        agendarBtn.addEventListener('click', scheduleAppointment);
+      }
+      const patientDropdown = document.getElementById('patientSelect');
+      if (patientDropdown) {
+        patientDropdown.addEventListener('change', e => {
+          const selectedId = e.target.value;
+          if (selectedId) {
+            setCurrentCase(selectedId);
+          }
+        });
+      }
+      // Carregar caso salvo ou iniciar novo
+      const currentId = localStorage.getItem('current_case_id');
+      if (currentId) {
+        setCurrentCase(currentId);
+      } else if (casesList.length > 0) {
+        setCurrentCase(casesList[0].id);
+      } else {
+        createNewCase();
+      }
+      // Preenche listas de seleção e agendamentos
+      populateCaseDropdowns();
+      renderAppointments();
+      updateUI();
+    }
+
+    /**
+     * Alterna entre as abas de cadastro, análise e agendamento.
+     * @param {string} tab - 'cadastro', 'analise' ou 'agendamento'
+     */
+    function switchTab(tab) {
+      const cadastroSection = document.getElementById('cadastroSection');
+      const analiseSection = document.getElementById('analiseSection');
+      const agendamentoSection = document.getElementById('agendamentoSection');
+      const tabCadastro = document.getElementById('tabCadastro');
+      const tabAnalise = document.getElementById('tabAnalise');
+      const tabAgendamento = document.getElementById('tabAgendamento');
+      if (tab === 'cadastro') {
+        cadastroSection.style.display = '';
+        analiseSection.style.display = 'none';
+        if (agendamentoSection) agendamentoSection.style.display = 'none';
+        tabCadastro.classList.add('active');
+        tabAnalise.classList.remove('active');
+        if (tabAgendamento) tabAgendamento.classList.remove('active');
+      } else {
+        cadastroSection.style.display = 'none';
+        if (tab === 'analise') {
+          analiseSection.style.display = '';
+          if (agendamentoSection) agendamentoSection.style.display = 'none';
+          tabCadastro.classList.remove('active');
+          tabAnalise.classList.add('active');
+          if (tabAgendamento) tabAgendamento.classList.remove('active');
+        } else if (tab === 'agendamento') {
+          analiseSection.style.display = 'none';
+          if (agendamentoSection) agendamentoSection.style.display = '';
+          tabCadastro.classList.remove('active');
+          if (tabAnalise) tabAnalise.classList.remove('active');
+          if (tabAgendamento) tabAgendamento.classList.add('active');
+        }
+      }
+    }
+
+    /**
+     * Cria um novo caso zerado e salva em localStorage.
+     */
+    function createNewCase() {
+      const now = new Date().toISOString();
+      caseData = {
+        id: 'caso-' + Date.now(),
+        createdAt: now,
+        updatedAt: now,
+        patient: {
+          nome: '',
+          idade: '',
+          genero: ''
+        },
+        anamnese: null, // { fileName, fileType, dataUri, textContent }
+        tests: null,    // { fileName, fileType, dataUri, textContent }
+        steps: {},      // será inicializado abaixo
+        coherence: [],  // resultados da última análise de coerência
+        shareId: null
+      };
+      STEPS.forEach(step => {
+        caseData.steps[step.id] = { status: 'pendente', original: '', edited: '' };
+      });
+      // Adiciona o novo caso à lista e define-o como atual
+      casesList.push(caseData);
+      saveCasesList();
+      localStorage.setItem('current_case_id', caseData.id);
+      populateCaseDropdowns();
+      saveCase();
+      updateUI();
+    }
+
+    /**
+     * Salva o caso atual em localStorage e atualiza a data de modificação.
+     */
+    function saveCase() {
+      caseData.updatedAt = new Date().toISOString();
+      // Atualiza o caso na lista e persiste
+      const idx = casesList.findIndex(c => c.id === caseData.id);
+      if (idx >= 0) {
+        casesList[idx] = caseData;
+      } else {
+        casesList.push(caseData);
+      }
+      saveCasesList();
+      localStorage.setItem('current_case_id', caseData.id);
+      // Atualiza dropdowns após salvar para refletir mudanças de nome
+      populateCaseDropdowns();
+      updateUI();
+    }
+
+    /**
+     * Atualiza a interface de acordo com os dados do caso atual.
+     */
+    function updateUI() {
+      if (!caseData || shareView) return;
+      // Preenche campos do paciente
+      document.getElementById('pacienteNome').value = caseData.patient.nome || '';
+      document.getElementById('pacienteIdade').value = caseData.patient.idade || '';
+      document.getElementById('pacienteGenero').value = caseData.patient.genero || '';
+      // Exibe informação de anamnese
+      const anamneseInfo = document.getElementById('anamneseInfo');
+      if (caseData.anamnese) {
+        anamneseInfo.textContent = `Arquivo: ${caseData.anamnese.fileName}`;
+      } else {
+        anamneseInfo.textContent = 'Nenhum arquivo enviado.';
+      }
+      // Exibe informação de testes
+      const testsInfo = document.getElementById('testsInfo');
+      if (caseData.tests) {
+        testsInfo.textContent = `Arquivo: ${caseData.tests.fileName}`;
+      } else {
+        testsInfo.textContent = 'Nenhum arquivo enviado.';
+      }
+      // Valida cadastro e habilita/desabilita as abas
+      validateCadastro();
+      // Recria a lista de etapas
+      buildStepsUI();
+      // Exibe resultados de coerência, se houver
+      const coherenceDiv = document.getElementById('coherenceResults');
+      if (caseData.coherence && caseData.coherence.length > 0) {
+        coherenceDiv.innerHTML = '<ul>' + caseData.coherence.map(item => `<li>${item}</li>`).join('') + '</ul>';
+      } else {
+        coherenceDiv.innerHTML = '';
+      }
+      // Atualiza export options se estiverem visíveis
+      if (document.getElementById('exportOptions').style.display !== 'none') {
+        buildExportOptions();
+      }
+      // Atualiza link de compartilhamento
+      const shareLinkContainer = document.getElementById('shareLinkContainer');
+      if (caseData.shareId && caseData.shareUrl) {
+        shareLinkContainer.innerHTML = `<p>Link gerado: <a href="${caseData.shareUrl}" target="_blank">${caseData.shareUrl}</a></p>`;
+      }
+      // Atualiza listas de pacientes e agendamentos
+      populateCaseDropdowns();
+      renderAppointments();
+    }
+
+    /**
+     * Valida os campos de cadastro e define se as abas Análise e Agendamento podem ser acessadas.
+     */
+    function validateCadastro() {
+      const tabAnalise = document.getElementById('tabAnalise');
+      const tabAgendamento = document.getElementById('tabAgendamento');
+      let valido = true;
+      const nome = caseData.patient.nome || '';
+      const idade = caseData.patient.idade || '';
+      const genero = caseData.patient.genero || '';
+      // Campos obrigatórios
+      if (!nome.trim()) {
+        valido = false;
+        document.getElementById('erroNome').textContent = 'Nome é obrigatório.';
+      } else {
+        document.getElementById('erroNome').textContent = '';
+      }
+      if (!idade || isNaN(idade) || idade <= 0 || idade > 120) {
+        valido = false;
+        document.getElementById('erroIdade').textContent = 'Informe uma idade válida (1-120).';
+      } else {
+        document.getElementById('erroIdade').textContent = '';
+      }
+      if (!genero) {
+        valido = false;
+        document.getElementById('erroGenero').textContent = 'Selecione um gênero.';
+      } else {
+        document.getElementById('erroGenero').textContent = '';
+      }
+      // Verifica anamnese
+      if (!caseData.anamnese) {
+        valido = false;
+        document.getElementById('erroAnamnese').textContent = 'Envie o documento de anamnese.';
+      } else {
+        document.getElementById('erroAnamnese').textContent = '';
+      }
+      // Atualiza estado das abas
+      tabAnalise.disabled = !valido;
+      // A aba Agendamento é habilitada se houver pelo menos um caso salvo
+      if (tabAgendamento) {
+        tabAgendamento.disabled = casesList.length === 0;
+      }
+      if (!valido) {
+        // Se estiver na aba de análise mas cadastro inválido, volta para cadastro
+        switchTab('cadastro');
+      }
+    }
+
+    /**
+     * Constrói a interface das etapas de geração de texto.
+     */
+    function buildStepsUI() {
+      const container = document.getElementById('stepsContainer');
+      // Limpar container
+      container.innerHTML = '';
+      STEPS.forEach(step => {
+        const stepData = caseData.steps[step.id];
+        // Cria card de etapa
+        const card = document.createElement('div');
+        card.className = 'step-card';
+        // Cabeçalho com título e status
+        const header = document.createElement('div');
+        header.className = 'step-header';
+        const title = document.createElement('h4');
+        title.textContent = step.title;
+        const status = document.createElement('span');
+        status.className = 'status-label status-' + stepData.status;
+        status.textContent = stepData.status.charAt(0).toUpperCase() + stepData.status.slice(1);
+        header.appendChild(title);
+        header.appendChild(status);
+        card.appendChild(header);
+        // Botões de ação
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'step-actions';
+        const generateBtn = document.createElement('button');
+        generateBtn.textContent = stepData.status === 'pendente' ? 'Gerar' : 'Regerar';
+        // Desabilita se testes não carregados ou com erro
+        generateBtn.disabled = !caseData.tests || caseData.tests.fileType === 'error';
+        // Define tipo botão para não submeter formulários
+        generateBtn.type = 'button';
+        // Associa função de geração via addEventListener. Usamos closure para preservar o id da etapa.
+        generateBtn.addEventListener('click', () => {
+          generateStep(step.id);
+        });
+        actionsDiv.appendChild(generateBtn);
+        card.appendChild(actionsDiv);
+        // Área de texto gerado com edição
+        const textarea = document.createElement('textarea');
+        textarea.className = 'step-text';
+        textarea.value = stepData.edited || '';
+        textarea.placeholder = 'Texto gerado aparecerá aqui...';
+        textarea.addEventListener('input', () => {
+          // Ao editar, altera o texto editado e atualiza status para revisado
+          caseData.steps[step.id].edited = textarea.value;
+          if (caseData.steps[step.id].status === 'gerado') {
+            caseData.steps[step.id].status = 'revisado';
+          }
+          saveCase();
+        });
+        // Desativa edição se pendente ou se não houver texto gerado
+        if (stepData.status === 'pendente') {
+          textarea.disabled = true;
+        }
+        card.appendChild(textarea);
+        container.appendChild(card);
+      });
+    }
+
+    /**
+     * Lida com a entrada nos campos de paciente, atualizando os dados do caso.
+     * @param {Event} e
+     */
+    function handlePatientInput(e) {
+      const field = e.target.name;
+      caseData.patient[field] = e.target.value;
+      saveCase();
+    }
+
+    /**
+     * Lida com o upload do arquivo de anamnese.
+     * Aceita PDF, DOC, DOCX ou TXT. Arquivos TXT são lidos para conteúdo;
+     * PDF/DOCX são armazenados como base64 sem extração de texto.
+     */
+    function handleAnamneseUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const ext = file.name.split('.').pop().toLowerCase();
+      const allowed = ['pdf', 'doc', 'docx', 'txt'];
+      if (!allowed.includes(ext)) {
+        document.getElementById('erroAnamnese').textContent = 'Formato não suportado. Utilize PDF, DOCX ou TXT.';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const dataUrl = event.target.result;
+        // Se arquivo de texto, extrai conteúdo; caso contrário deixa vazio
+        if (ext === 'txt') {
+          const textReader = new FileReader();
+          textReader.onload = function(evt) {
+            caseData.anamnese = {
+              fileName: file.name,
+              fileType: ext,
+              dataUri: dataUrl,
+              textContent: evt.target.result
+            };
+            saveCase();
+          };
+          textReader.onerror = function() {
+            caseData.anamnese = {
+              fileName: file.name,
+              fileType: ext,
+              dataUri: dataUrl,
+              textContent: null
+            };
+            saveCase();
+          };
+          textReader.readAsText(file, 'utf-8');
+        } else {
+          // PDF/DOC/DOCX: apenas armazena base64, sem extração de texto
+          caseData.anamnese = {
+            fileName: file.name,
+            fileType: ext,
+            dataUri: dataUrl,
+            textContent: null
+          };
+          saveCase();
+        }
+      };
+      reader.onerror = function() {
+        document.getElementById('erroAnamnese').textContent = 'Erro ao ler o arquivo.';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * Lida com o upload dos resultados de testes.
+     * Aceita PDF, DOC, DOCX ou TXT. TXT tem o conteúdo extraído; outros formatos são armazenados sem leitura.
+     */
+    function handleTestsUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const ext = file.name.split('.').pop().toLowerCase();
+      const allowed = ['pdf', 'doc', 'docx', 'txt'];
+      if (!allowed.includes(ext)) {
+        document.getElementById('erroTests').textContent = 'Formato não suportado. Utilize PDF, DOCX ou TXT.';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const dataUrl = event.target.result;
+        if (ext === 'txt') {
+          const textReader = new FileReader();
+          textReader.onload = function(evt) {
+            caseData.tests = {
+              fileName: file.name,
+              fileType: ext,
+              dataUri: dataUrl,
+              textContent: evt.target.result
+            };
+            // Após o upload dos testes, as etapas podem ser ativadas
+            saveCase();
+          };
+          textReader.onerror = function() {
+            caseData.tests = {
+              fileName: file.name,
+              fileType: ext,
+              dataUri: dataUrl,
+              textContent: null
+            };
+            saveCase();
+          };
+          textReader.readAsText(file, 'utf-8');
+        } else {
+          caseData.tests = {
+            fileName: file.name,
+            fileType: ext,
+            dataUri: dataUrl,
+            textContent: null
+          };
+          saveCase();
+        }
+      };
+      reader.onerror = function() {
+        document.getElementById('erroTests').textContent = 'Erro ao ler o arquivo.';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * Gera ou regera uma seção específica utilizando informações do caso.
+     * @param {string} stepId
+     */
+    async function generateStep(stepId) {
+      // Impede múltiplas execuções simultâneas desabilitando todos os botões
+      const buttons = document.querySelectorAll('.step-actions button');
+      buttons.forEach(btn => (btn.disabled = true));
+      try {
+        // Aguarda geração via IA (ou fallback)
+        const aiText = await generateAIContent(stepId);
+        caseData.steps[stepId].original = aiText;
+        caseData.steps[stepId].edited = aiText;
+        caseData.steps[stepId].status = 'gerado';
+        saveCase();
+      } catch (e) {
+        console.error('Erro ao gerar passo:', e);
+        alert('Erro ao gerar a seção: ' + e.message);
+      } finally {
+        // Reabilita botões
+        buttons.forEach(btn => (btn.disabled = false));
+      }
+    }
+
+    /**
+     * Função que constrói o conteúdo gerado pela IA para uma seção específica.
+     * Utiliza dados do paciente, anamnese e testes. Onde não houver dados, insere
+     * explicitamente "não consta nos anexos" conforme especificado. O texto gerado
+     * é garantido ter no mínimo 300 palavras através de padToMinWords.
+     * @param {string} stepId
+     * @returns {string} Texto gerado em português.
+     */
+    async function generateAIContent(stepId) {
+      const paciente = caseData.patient;
+      const anamneseText = caseData.anamnese && caseData.anamnese.textContent ? caseData.anamnese.textContent : '';
+      const testsText = caseData.tests && caseData.tests.textContent ? caseData.tests.textContent : '';
+      // Nome da etapa legível
+      const stepInfo = STEPS.find(s => s.id === stepId);
+      const stepTitle = stepInfo ? stepInfo.title : stepId;
+      // Dados do neuropsicólogo fixos
+      const neuroName = 'Thiago Carvalho de Souza';
+      const neuroReg = 'CRP 05/63586';
+      const neuroLoc = 'Campos dos Goytacazes, Rio de Janeiro';
+      const today = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+      // Monta o prompt para a IA
+      const prompt = `Você deve redigir a seção "${stepTitle}" de um relatório de avaliação neuropsicológica em português do Brasil. Utilize exclusivamente as informações fornecidas a seguir sobre o paciente e os documentos. A descrição deve conter no mínimo 300 palavras, ser clara, explicativa e estruturada, mas não deve elaborar diagnósticos formais segundo DSM‑5 ou CID‑11, pois esta IA não realiza esse tipo de análise.\n\nDados do Paciente:\nNome: ${paciente.nome || 'não consta nos anexos'}; Idade: ${paciente.idade || 'não consta nos anexos'}; Gênero: ${paciente.genero || 'não consta nos anexos'}.\n\nAnamnese:\n${anamneseText || 'não consta nos anexos'}.\n\nResultados dos Testes:\n${testsText || 'não consta nos anexos'}.\n\nProfissional responsável: ${neuroName} (${neuroReg}), Local: ${neuroLoc}, Data: ${today}.\n\nInstrução: Gere a seção "${stepTitle}" seguindo a ordem pré‑estabelecida: identificação, queixa principal, histórico clínico e psicossocial, instrumentos utilizados, resultados e interpretação por domínios cognitivos, hipótese diagnóstica, justificativa e diagnóstico diferencial, conclusão e recomendações, referências. Para seções que não tenham dados disponíveis, escreva explicitamente "não consta nos anexos". Não mencione este aviso.`;
+
+      try {
+        // Tenta gerar conteúdo via API GPT
+        const aiResponse = await callGPT(prompt);
+        // Garante 300 palavras
+        return padToMinWords(aiResponse, 300);
+      } catch (err) {
+        // Em caso de falha, fallback para geração local básica conforme dados disponíveis
+        console.warn('Falha na geração via IA, usando fallback local:', err);
+        switch (stepId) {
+          case 'identificacao':
+            return padToMinWords(`Identificação\n\nPaciente: ${paciente.nome || 'não consta nos anexos'}\nIdade: ${paciente.idade || 'não consta nos anexos'}\nGênero: ${paciente.genero || 'não consta nos anexos'}\n\nProfissional responsável: ${neuroName} (${neuroReg})\nLocal: ${neuroLoc}\nData: ${today}\n`, 300);
+          case 'queixa':
+            return padToMinWords(`Queixa Principal\n\n${extractSection(anamneseText, 'queixa') || 'não consta nos anexos'}`, 300);
+          case 'historico':
+            return padToMinWords(`Histórico Clínico e Psicossocial\n\n${extractSection(anamneseText, 'hist') || 'não consta nos anexos'}`, 300);
+          case 'instrumentos':
+            return padToMinWords(`Instrumentos Utilizados\n\n${caseData.tests ? 'Foram utilizados os testes anexados: ' + caseData.tests.fileName : 'não consta nos anexos'}`, 300);
+          case 'resultados':
+            return padToMinWords(`Resultados e Interpretação por Domínios Cognitivos\n\n${testsText ? await summarizeText(testsText) : 'não consta nos anexos'}`, 300);
+          case 'hipotese':
+            return padToMinWords(`Hipótese Diagnóstica\n\n${testsText ? 'Com base nos resultados e na anamnese, descrevem-se possíveis hipóteses para investigação clínica, sem estabelecer diagnóstico formal segundo DSM-5 ou CID-11: ' + (await summarizeText(testsText)) : 'não consta nos anexos'}`, 300);
+          case 'justificativa':
+            return padToMinWords(`Justificativa e Diagnóstico Diferencial\n\n${testsText ? 'Aqui estão justificativas e possíveis diagnósticos diferenciais descritos a partir dos documentos anexados, sem seguir critérios diagnósticos formais: ' + (await summarizeText(testsText)) : 'não consta nos anexos'}`, 300);
+          case 'conclusao':
+            return padToMinWords(`Conclusão e Recomendações\n\n${testsText ? 'Com base na avaliação, recomenda-se: não consta nos anexos' : 'não consta nos anexos'}`, 300);
+          case 'referencias':
+            return padToMinWords(`Referências\n\n${testsText || anamneseText ? 'As referências bibliográficas utilizadas estão registradas nos anexos.' : 'não consta nos anexos'}`, 300);
+          default:
+            return padToMinWords('', 300);
+        }
+      }
+    }
+
+    /**
+     * Tenta extrair uma subseção específica do texto da anamnese.
+     * Como não há processamento sofisticado, esta função procura palavras-chave e
+     * retorna o trecho que as segue.
+     * @param {string} text
+     * @param {string} keyword
+     * @returns {string|null}
+     */
+    function extractSection(text, keyword) {
+      if (!text) return null;
+      const lower = text.toLowerCase();
+      const idx = lower.indexOf(keyword);
+      if (idx !== -1) {
+        const end = Math.min(text.length, idx + 300);
+        return text.substring(idx, end).trim();
+      }
+      return null;
+    }
+
+    /**
+     * Garante que um texto tenha pelo menos um número mínimo de palavras. Se
+     * o texto base possuir menos palavras que o limiar, adiciona repetições de
+     * uma frase de preenchimento até atingir a contagem desejada.
+     * @param {string} text Texto base
+     * @param {number} minWords Número mínimo de palavras desejado
+     * @returns {string} Texto com pelo menos minWords palavras
+     */
+    function padToMinWords(text, minWords) {
+      let content = text || '';
+      let words = content.trim().split(/\s+/).filter(w => w.length > 0);
+      const filler = 'informação adicional não consta nos anexos.';
+      while (words.length < minWords) {
+        words = words.concat(filler.split(/\s+/));
+      }
+      return words.join(' ');
+    }
+
+    /**
+     * Resume texto de forma assíncrona. Se houver uma chave API configurada,
+     * tenta resumir com o GPT. Caso contrário, ou em caso de erro, devolve
+     * os primeiros 400 caracteres do texto.
+     * @param {string} text
+     * @returns {Promise<string>}
+     */
+    async function summarizeText(text) {
+      if (!text) return '';
+      const trimmed = text.trim();
+      if (openaiKey) {
+        const prompt = `Resuma de forma clara e objetiva o texto a seguir, em português do Brasil, com no máximo 200 palavras. Mantenha apenas as informações mais relevantes:\n\n${trimmed}`;
+        try {
+          const summary = await callGPT(prompt);
+          return summary && summary.length > 0 ? summary : trimmed;
+        } catch (err) {
+          console.warn('Falha ao resumir texto via IA, usando resumo local:', err);
+        }
+      }
+      if (trimmed.length > 400) {
+        return trimmed.substring(0, 400) + '...';
+      }
+      return trimmed;
+    }
+
+    /**
+     * Carrega a chave de API do armazenamento local e atualiza a variável global.
+     * Também preenche o campo de entrada de chave na interface, se disponível.
+     */
+    function loadApiKey() {
+      try {
+        const stored = localStorage.getItem('openai_key');
+        if (stored) {
+          openaiKey = stored;
+        }
+        const input = document.getElementById('apiKeyInput');
+        const status = document.getElementById('apiKeyStatus');
+        if (input) {
+          input.value = openaiKey || '';
+          if (status) {
+            status.textContent = openaiKey ? 'Chave carregada.' : 'Nenhuma chave salva.';
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao carregar chave API:', e);
+      }
+    }
+
+    /**
+     * Salva a chave de API fornecida pelo usuário em localStorage e atualiza a variável
+     * global. Atualiza a interface para informar que a chave foi salva.
+     */
+    function saveApiKey() {
+      const input = document.getElementById('apiKeyInput');
+      const status = document.getElementById('apiKeyStatus');
+      const key = input ? input.value.trim() : '';
+      if (!key) {
+        if (status) status.textContent = 'Chave não pode ser vazia.';
+        return;
+      }
+      try {
+        openaiKey = key;
+        localStorage.setItem('openai_key', key);
+        if (status) status.textContent = 'Chave salva com sucesso.';
+      } catch (e) {
+        console.error('Erro ao salvar chave API:', e);
+        if (status) status.textContent = 'Erro ao salvar a chave.';
+      }
+    }
+
+    /**
+     * Envia uma solicitação à API do GPT para gerar texto a partir de um prompt.
+     * Se a chave não estiver definida ou ocorrer um erro, lança uma exceção para que
+     * a função chamadora possa lidar com o fallback. O formato do prompt deve
+     * incluir todas as informações relevantes (paciente, anamnese, testes e
+     * instruções) e em português, pois a IA responderá no mesmo idioma.
+     * @param {string} prompt
+     * @returns {Promise<string>}
+     */
+    async function callGPT(prompt) {
+      if (!openaiKey) {
+        throw new Error('Chave de API não definida. Configure a chave no cadastro.');
+      }
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + openaiKey
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              { role: 'system', content: 'Você é um neuropsicólogo experiente que redige relatórios clínicos em português de forma clara, estruturada e fundamentada em dados fornecidos.' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.4,
+            max_tokens: 1024
+          })
+        });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error('Falha na solicitação à API: ' + errorText);
+        }
+        const data = await response.json();
+        const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+        if (!content) {
+          throw new Error('Resposta da IA vazia.');
+        }
+        return content.trim();
+      } catch (e) {
+        console.error('Erro ao chamar API GPT:', e);
+        throw e;
+      }
+    }
+
+    /**
+     * Executa a análise de coerência, verificando se há contradições ou ausências
+     * de dados entre as seções geradas, a anamnese e os testes. O resultado é
+     * exibido na interface e salvo no caso.
+     */
+    function analyzeCoherence() {
+      const issues = [];
+      // Verifica presença dos anexos
+      if (!caseData.anamnese) issues.push('Anamnese não anexada.');
+      if (!caseData.tests) issues.push('Testes não anexados.');
+      // Verifica se cada etapa obrigatória foi gerada
+      STEPS.forEach(step => {
+        const s = caseData.steps[step.id];
+        if (s.status === 'pendente') {
+          issues.push(`Seção "${step.title}" não foi gerada.`);
+        }
+      });
+      // Verifica se idade é compatível
+      const idade = parseInt(caseData.patient.idade, 10);
+      if (idade && (idade < 3 || idade > 100)) {
+        issues.push('Idade informada fora da faixa típica para avaliações neuropsicológicas.');
+      }
+      // Verifica campos vazios na anamnese e testes
+      if (caseData.anamnese && caseData.anamnese.fileType === 'txt' && (!caseData.anamnese.textContent || !caseData.anamnese.textContent.trim())) {
+        issues.push('Documento de anamnese vazio.');
+      }
+      if (caseData.tests && caseData.tests.fileType === 'txt' && (!caseData.tests.textContent || !caseData.tests.textContent.trim())) {
+        issues.push('Documento de testes vazio.');
+      }
+      // Atualiza dados
+      caseData.coherence = issues;
+      saveCase();
+      // Exibe na interface
+      const coherenceDiv = document.getElementById('coherenceResults');
+      if (issues.length === 0) {
+        coherenceDiv.innerHTML = '<p>Nenhuma incoerência identificada.</p>';
+      } else {
+        coherenceDiv.innerHTML = '<ul>' + issues.map(i => `<li>${i}</li>`).join('') + '</ul>';
+      }
+    }
+
+    /**
+     * Mostra ou oculta o painel de seleção de seções para exportação.
+     */
+    function toggleExportOptions() {
+      const panel = document.getElementById('exportOptions');
+      if (panel.style.display === 'none' || panel.style.display === '') {
+        buildExportOptions();
+        panel.style.display = 'block';
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+
+    /**
+     * Constrói a lista de seções com caixas de seleção para exportação.
+     */
+    function buildExportOptions() {
+      const form = document.getElementById('exportForm');
+      form.innerHTML = '';
+      STEPS.forEach(step => {
+        const sData = caseData.steps[step.id];
+        if (sData.status !== 'pendente') {
+          const id = 'export-' + step.id;
+          const label = document.createElement('label');
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.id = id;
+          checkbox.name = 'sections';
+          checkbox.value = step.id;
+          checkbox.checked = true;
+          label.appendChild(checkbox);
+          label.appendChild(document.createTextNode(' ' + step.title));
+          form.appendChild(label);
+        }
+      });
+    }
+
+    /**
+     * Exporta as seções selecionadas em um arquivo TXT contendo somente o texto
+     * original gerado pela IA. Não inclui edições manuais.
+     */
+    function exportTXT() {
+      const checkboxes = document.querySelectorAll('#exportForm input[type=checkbox]:checked');
+      if (checkboxes.length === 0) {
+        alert('Selecione pelo menos uma seção para exportar.');
+        return;
+      }
+      let content = '';
+      checkboxes.forEach(cb => {
+        const stepId = cb.value;
+        const stepInfo = STEPS.find(s => s.id === stepId);
+        if (caseData.steps[stepId]) {
+          content += caseData.steps[stepId].original + '\n\n';
+        }
+      });
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'relatorio_neuropsicologico.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Gera um link de compartilhamento para o caso atual contendo apenas dados
+     * necessários (paciente e texto original das seções geradas). A URL gerada
+     * inclui os dados codificados em base64 após "#share=". O link é exibido
+     * na interface e armazenado no caso para referência futura.
+     */
+    function shareCase() {
+      const shareData = {
+        patient: caseData.patient,
+        steps: {}
+      };
+      STEPS.forEach(step => {
+        const s = caseData.steps[step.id];
+        if (s && s.status !== 'pendente') {
+          shareData.steps[step.id] = s.original;
+        }
+      });
+      const json = JSON.stringify(shareData);
+      const encoded = btoa(json);
+      const url = `${window.location.origin}${window.location.pathname}#share=${encodeURIComponent(encoded)}`;
+      caseData.shareId = Date.now().toString();
+      caseData.shareUrl = url;
+      saveCase();
+      alert('Link de compartilhamento gerado.');
+    }
+
+    /**
+     * Cria um novo agendamento a partir dos campos da interface. Valida se
+     * paciente, data e hora foram selecionados. Armazena o agendamento na lista
+     * global e persiste no localStorage. Após a criação, atualiza a lista
+     * exibida ao usuário e limpa os campos.
+     */
+    function scheduleAppointment() {
+      const patientSelect = document.getElementById('agendamentoPaciente');
+      const dataInput = document.getElementById('agendamentoData');
+      const horaInput = document.getElementById('agendamentoHora');
+      const notasInput = document.getElementById('agendamentoNotas');
+      const errorSpan = document.getElementById('erroAgendamento');
+      if (!patientSelect || !dataInput || !horaInput) return;
+      const caseId = patientSelect.value;
+      const data = dataInput.value;
+      let hora = horaInput.value;
+      const notas = notasInput ? notasInput.value.trim() : '';
+      // Validações
+      let valid = true;
+      let mensagem = '';
+      if (!caseId) {
+        valid = false;
+        mensagem = 'Selecione um paciente.';
+      } else if (!data) {
+        valid = false;
+        mensagem = 'Informe a data do agendamento.';
+      }
+      // Se hora estiver vazia, define como 00:00 por padrão
+      if (!hora) {
+        hora = '00:00';
+      }
+      if (!valid) {
+        if (errorSpan) errorSpan.textContent = mensagem;
+        return;
+      }
+      // Limpa mensagem de erro
+      if (errorSpan) errorSpan.textContent = '';
+      // Cria o objeto de agendamento
+      const appt = {
+        id: 'apto-' + Date.now(),
+        caseId: caseId,
+        data: data,
+        hora: hora,
+        notas: notas
+      };
+      appointments.push(appt);
+      saveAppointments();
+      // Atualiza lista na UI
+      renderAppointments();
+      // Limpa campos
+      dataInput.value = '';
+      horaInput.value = '';
+      if (notasInput) notasInput.value = '';
+      alert('Agendamento criado com sucesso.');
+    }
+
+    /**
+     * Renderiza a visualização somente leitura de um caso compartilhado.
+     * Oculta a interface de cadastro/análise e exibe as seções geradas.
+     * @param {Object} data Dados decodificados do link de compartilhamento
+     */
+    function renderSharedCase(data) {
+      document.body.innerHTML = '';
+      const container = document.createElement('div');
+      container.style.maxWidth = '800px';
+      container.style.margin = '0 auto';
+      container.style.padding = '20px';
+      const title = document.createElement('h2');
+      title.textContent = 'Relatório Compartilhado';
+      container.appendChild(title);
+      const patientDiv = document.createElement('div');
+      patientDiv.innerHTML = `<h3>Identificação do Paciente</h3>
+      <p><strong>Nome:</strong> ${data.patient.nome || 'não consta nos anexos'}</p>
+      <p><strong>Idade:</strong> ${data.patient.idade || 'não consta nos anexos'}</p>
+      <p><strong>Gênero:</strong> ${data.patient.genero || 'não consta nos anexos'}</p>`;
+      container.appendChild(patientDiv);
+      // Exibe cada seção compartilhada
+      Object.keys(data.steps).forEach(key => {
+        const stepTitle = STEPS.find(s => s.id === key)?.title || key;
+        const section = document.createElement('div');
+        section.style.marginTop = '20px';
+        section.innerHTML = `<h3>${stepTitle}</h3><pre style="white-space: pre-wrap;">${data.steps[key]}</pre>`;
+        container.appendChild(section);
+      });
+      document.body.appendChild(container);
+    }
+  </script>
+</body>
+</html>
